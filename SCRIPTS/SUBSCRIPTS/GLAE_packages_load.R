@@ -28,6 +28,7 @@ library("extrafont") #Fonts for the flextable
 library("svDialogs") #for pop-ups
 library("sf") # for geometry
 library("reactable") #For interactive tables
+library("openxlsx")
 
 
 # The below are needed to install GLA packages the first time it is runs

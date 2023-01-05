@@ -1,37 +1,6 @@
-  ################################################################################ 
-  # 00. LOAD LIBRARIES AND SET UP PATHS
-  ################################################################################ 
-  
-
-  library("here")
-  library("tidyverse")
-  library("ggplot2")
-  library("ggthemes")
-  library("nomisr")
-  library("devtools")
-  library("remotes")
-  library("scales")
-  library("gglaplot")
-  library("data.table")
-  library("janitor")
-  library("lubridate")
-  library("readr")
-  library("ggrepel")
-  library("plotly")
-  library("magrittr")
-  library("zoo")
-  library("openxlsx")
-
-  #.............................................................................
-  
-  ### Paths
-  INPUT <- paste0(here("INPUT"),"/")
-  INTERMEDIATE <- paste0(here("INTERMEDIATE"),"/")
-  OUTPUT <- paste0(here("OUTPUT"),"/")
-  
-  ############################################################################## 
-  # 01. IMPORT DATASETS
-  ############################################################################## 
+  #_____________________________________________________________________________
+  # 01. IMPORT DATASETS ----
+  #_____________________________________________________________________________
   
   # NOTES: 
   # Newer series have aggregated classes to correspond to old codes. This applies to:
@@ -44,11 +13,9 @@
   # 829_129	Sum of 8291, 8292 and 8299
   
 
-  
-  
-  #_____________________________________________________________________________
-  # 01.1. Import SIC mapping
-  #_____________________________________________________________________________
+  #.............................................................................
+  ## 01.1. Import SIC mapping ----
+  #.............................................................................
   
   # Load mapping for aggregating classes
   aggr_codes_mapping <- readxl::read_excel(path = here("INPUT","SIC code aggregation.xlsx"), sheet = "Mapping") %>%
@@ -98,9 +65,9 @@
   # Check that all code names are uniquely identified
   stopifnot(identical(sic_descriptions[,"code_name"], unique(sic_descriptions[,"code_name"])))
   
-  #_____________________________________________________________________________
-  # 01.2. Import WFJ series
-  #_____________________________________________________________________________
+  #.............................................................................
+  ## 01.2. Import WFJ series ----
+  #.............................................................................
   
   
   # - NOTE: should automate the procedure for this as well,
@@ -116,9 +83,9 @@
                                        replacement = "wfj_"))
   
   
-  #_____________________________________________________________________________
-  # 01.3. Import BRES data for years 1998-2015
-  #_____________________________________________________________________________
+  #.............................................................................
+  ## 01.3. Import BRES data for years 1998-2015 ----
+  #.............................................................................
   
   
   
@@ -225,9 +192,9 @@
   # Check that all code names are uniquely identified
   stopifnot(identical(bres_9815[,"code_name"], unique(bres_9815[,"code_name"])))
   
-  #_____________________________________________________________________________
-  # 01.4. Import data for years post 2016
-  #_____________________________________________________________________________
+  #.............................................................................
+  ## 01.4. Import data for years post 2016 ----
+  #.............................................................................
   
   
   #.............................................................................
@@ -352,9 +319,9 @@
     remove(bres_year_temp_agg)
   }
   
-  #_____________________________________________________________________________
-  # 01.5. COMBINE ALL BRES DATA
-  #_____________________________________________________________________________
+  #.............................................................................
+  ## 01.5. COMBINE ALL BRES DATA ----
+  #.............................................................................
   
   bres_combined_data <- tibble("code_name" = character(),
                                "level_num" = numeric(),
@@ -371,17 +338,17 @@
       
   }
   
-  ############################################################################## 
-  # 02. CALCULATE AND APPLY WFJ CONSTRAINT FACTORS
-  ############################################################################## 
+  #_____________________________________________________________________________
+  # 02. CALCULATE AND APPLY WFJ CONSTRAINT FACTORS ----
+  #_____________________________________________________________________________
   
   # Compare the section-level jobs data from BRES and WFJ for each year
   # Calculate an 'uplift' factor to transform BRES data into WFJ levels
   # Then apply the factor for all levels
   
-  #_____________________________________________________________________________
-  # 02.1. CALCULATE FACTORS AT SECTOR LEVEL
-  #_____________________________________________________________________________
+  #.............................................................................
+  ## 02.1. CALCULATE FACTORS AT SECTOR LEVEL ----
+  #.............................................................................
   
   bres_combined_sector <- bres_combined_data %>% 
     filter(level_num == 1) %>% 
@@ -405,9 +372,9 @@
                                                      TRUE ~ .))) %>% # Where there are no factors, set to 1
     rename(section = code_name) #To merge on long SIC mapping
   
-  #_____________________________________________________________________________
-  # 02.2. APPLY FACTORS IN FULL BRES DATASET
-  #_____________________________________________________________________________
+  #.............................................................................
+  ## 02.2. APPLY FACTORS IN FULL BRES DATASET ----
+  #.............................................................................
   
   # First needs to assign the correct section at each level using mapping
   bres_combined_mapped <- bres_combined_data %>% 
@@ -430,9 +397,9 @@
   }
   
     
-  ############################################################################## 
-  # 03. Export 
-  ############################################################################## 
+  #_____________________________________________________________________________
+  # 03. Export  ----
+  #_____________________________________________________________________________
   
   # Export versions for error checking at full precision, but also for publication
   # where values are rounded. At section level, round to nearest 250, and 
@@ -442,9 +409,9 @@
   # Hence the data is exported to a file, but then needs to be copied over to the analysis workbooks
   # into the relevant sheet "data".
   
-  #_____________________________________________________________________________
-  # 03.1. Create final tables and export full precision
-  #_____________________________________________________________________________
+  #.............................................................................
+  ## 03.1. Create final tables and export full precision ----
+  #.............................................................................
   
   # Calculate row with totals before rounding
   bres_total_row <- bres_combined_constrained %>%
@@ -464,9 +431,9 @@
     select(-row_rank) %>% 
     write.xlsx( file = here("OUTPUT","Detailed jobs, full precision DATA.xlsx"),sheetName = "data", append=TRUE)
   
-  #_____________________________________________________________________________
-  # 03.2. Create output tables with rounded values
-  #_____________________________________________________________________________
+  #.............................................................................
+  ## 03.2. Create output tables with rounded values ----
+  #.............................................................................
   
   # Merge with level descriptions
   bres_out <- bres_full_precision %>% 

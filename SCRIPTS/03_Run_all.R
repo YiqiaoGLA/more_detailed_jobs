@@ -25,17 +25,10 @@
   # Inputs such as borough codes in Nomis
   source(paste0(SUBSCRIPTS,"GLAE_data_presets",".r"))
   
-  # Run the subscripts necessary for markdown
+  # Run the subscripts necessary 
   source(paste0(SUBSCRIPTS,"GLAE_functions_load",".r"))
-  source(paste0(SUBSCRIPTS,"GLAE_paye_dataload",".r"))
-  source(paste0(SUBSCRIPTS,"GLAE_cpih_dataload",".r")) # Needs to run after PAYE
-  source(paste0(SUBSCRIPTS,"GLAE_wfj_dataload",".r"))
-  # 
-  # # Misc datasets - LFS, CC and geographical
-  # source(paste0(SUBSCRIPTS,"GLAE_LMU_dataload.r"))
+
   
-  # Produce LMU markdown
-  # rmarkdown::render(paste0(SCRIPTS,"01_LMU_markdown_content.Rmd"),
-  #                   output_file = paste0(HTML_OUT,"LMU ", format(Sys.Date(),"%B %Y"), 
-  #                                       ".html"))
-  # 
+  # Run MDJ scripts
+  source(paste0(SCRIPTS,"01_Reshape_input_data",".r"))
+  source(paste0(SCRIPTS,"02_MDJ_table_production",".r"))
