@@ -259,13 +259,13 @@
   stopifnot(identical(bres_2017_rev[,"code_name"], unique(bres_2017_rev[,"code_name"])))
   
   #.............................................................................
-  # IMPORT 2018-2020
+  # IMPORT 2018-2021
   #.............................................................................
   
   # Newer format with more columns already.
   # Needs to perform split in section G and aggregate certain classes
   
-  for (year_data in c("2018_rev","2019_rev_v3","2020_prov")) {
+  for (year_data in c("2018_rev","2019_rev_v3","2020_rev_v2","2021_prov_v3")) {
     
     year <- substr(year_data,1,4)
     
@@ -327,7 +327,7 @@
                                "level_num" = numeric(),
                                "level_name" = character())
   
-  for (year_data in c("bres_9815","bres_2016_rev","bres_2017_rev", "bres_2018_rev", "bres_2019_rev_v3", "bres_2020_prov")) {
+  for (year_data in c("bres_9815","bres_2016_rev","bres_2017_rev", "bres_2018_rev", "bres_2019_rev_v3", "bres_2020_rev_v2","bres_2021_prov_v3")) {
     bres_temp <- eval(as.name(year_data))
     year <- substr(year_data,6,4)
     
@@ -360,7 +360,7 @@
   # Note on R code: using !!sym(.) tells R to evaluate the function immediately, so that it realises the string refers to an actual column
   # This is similar to using local macros within loops in Stata.
   
-  for (year in 1998:2020) {
+  for (year in 1998:2021) {
     bres_wfj_sectors <- bres_wfj_sectors %>% 
       mutate(!!sym(paste0("factor_",year)) := !!sym(paste0("wfj_",year))/!!sym(paste0("employee_jobs_",year))) 
   }
@@ -388,7 +388,7 @@
     arrange(level_num,code_name)
   
   # The loop below creates the constrained version of job numbers by multiplying factors with jobs in each relevant year
-  for (year in 1998:2020) {
+  for (year in 1998:2021) {
     bres_combined_constrained <- bres_combined_constrained %>% 
       mutate(!!sym(paste0("employee_jobs_c_",year)) := !!sym(paste0("employee_jobs_",year)) * !!sym(paste0("factor_",year))) %>% 
       mutate(!!sym(paste0("employee_jobs_c_",year)) :=  # Replace constrained sum with WFJ in section T
@@ -460,5 +460,5 @@
   
   # Export all data to single workbook
   data_list <- list("section_dat" = bres_out_1, "division_dat" = bres_out_2,"group_dat" = bres_out_3, "class_dat" = bres_out_4)
-  write.xlsx(data_list, file = here("OUTPUT","Detailed jobs, publication DATA.xlsx"), append=TRUE,keepNA = TRUE, na.string="...")
+  write.xlsx(data_list, file = here("DATA_OUT","Detailed jobs, publication DATA.xlsx"), append=TRUE,keepNA = TRUE, na.string="...")
       
