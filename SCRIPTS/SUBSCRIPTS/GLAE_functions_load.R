@@ -752,7 +752,7 @@ cpih_download <- function(force_download=FALSE) {
   cpih_rate_file_name <- paste0(cpih_last_release_date,"_raw_cpih_rate")
   
   # If the file exists, load it. Otherwise, download it and save - assume either both or neither exists
-  if (file.exists(paste0(RDATA,cpih_index_file_name,".rds")) & redownload_all==FALSE) {
+  if (file.exists(paste0(RDATA,cpih_index_file_name,".rds")) & force_download==FALSE) {
     
     cpih_index_raw <- readRDS(paste0(RDATA,cpih_index_file_name,".rds"))
     cpih_rate_raw <- readRDS(paste0(RDATA,cpih_rate_file_name,".rds"))
@@ -790,7 +790,8 @@ cpih_download <- function(force_download=FALSE) {
 # WFJ data download
 #...............................................................................
 
-wfj_download <- function(force_download=FALSE) {
+wfj_download <- function(force_download=FALSE,
+                         from_date="2010-01") {
   
   # Save files externally, using the most recent date
   wfj_last_release_date <- format(lm_release_date_checker(data_type="wfj"),"%y_%m_%d")
@@ -798,13 +799,13 @@ wfj_download <- function(force_download=FALSE) {
   wfj_file_name <- paste0(wfj_last_release_date,"_raw_wfj")
   
   # If the file exists, load it. Otherwise, download it and save
-  if (file.exists(paste0(RDATA,wfj_file_name,".rds")) & redownload_all==FALSE) {
+  if (file.exists(paste0(RDATA,wfj_file_name,".rds")) & force_download==FALSE) {
     
     wfj_stats_raw <- readRDS(paste0(RDATA,wfj_file_name,".rds"))
     
   } else {
     
-    wfj_stats_raw <- nomis_get_data(id = "NM_130_1", time = c("2010-01", "latest"), 
+    wfj_stats_raw <- nomis_get_data(id = "NM_130_1", time = c(from_date, "latest"), 
                                     geography = c(london_geo_code,uk_geo_code),
                                     industry=c(37748736,150994945:150994964))
     

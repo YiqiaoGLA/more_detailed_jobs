@@ -70,18 +70,19 @@
   #.............................................................................
   
   
-  # - NOTE: should automate the procedure for this as well,
-  # but since already have clear data in Excel, just import it instead
+  # - NOTE: this has now been automated, so not using the complicated Excel anymore
+  # 
+  # readxl::read_excel(path = here("INPUT","WFJ employee jobs 2023.xlsx"), sheet = "Final table wide") %>%
+  #   clean_names() %>%
+  #   saveRDS(file=paste0(INTERMEDIATE,"wfj_series",".Rda"))
+  #   
+  #   wfj_series <- readRDS(paste0(INTERMEDIATE,"wfj_series",".Rda")) %>% 
+  #     rename_with(~ stringr::str_replace(.x, 
+  #                                      pattern = "x", 
+  #                                      replacement = "wfj_"))
   
-  readxl::read_excel(path = here("INPUT","WFJ employee jobs 2022.xlsx"), sheet = "Final table wide") %>%
-    clean_names() %>%
-    saveRDS(file=paste0(INTERMEDIATE,"wfj_series",".Rda"))
-    
-    wfj_series <- readRDS(paste0(INTERMEDIATE,"wfj_series",".Rda")) %>% 
-      rename_with(~ stringr::str_replace(.x, 
-                                       pattern = "x", 
-                                       replacement = "wfj_"))
-  
+  # Save the new WFJ dataset to RDS
+  saveRDS(wfj_stats_mdj_wide,file=paste0(INTERMEDIATE,"wfj_series",".Rda"))
   
   #.............................................................................
   ## 01.3. Import BRES data for years 1998-2015 ----
@@ -355,7 +356,7 @@
     select(-c(starts_with("exist_in")))
   
   bres_wfj_sectors <- bres_combined_sector %>% 
-    merge(wfj_series, by.x = "code_name", by.y = "section", all= TRUE) 
+    merge(wfj_stats_mdj_wide, by.x = "code_name", by.y = "industry_code", all= TRUE) 
   
   # Note on R code: using !!sym(.) tells R to evaluate the function immediately, so that it realises the string refers to an actual column
   # This is similar to using local macros within loops in Stata.
@@ -429,7 +430,7 @@
   bres_full_precision %>% 
     arrange(row_rank, level_num,code_name) %>% 
     select(-row_rank) %>% 
-    write.xlsx( file = here("OUTPUT","Detailed jobs, full precision DATA.xlsx"),sheetName = "data", append=TRUE)
+    write.xlsx( file =paste0(DATA_OUT,"Detailed jobs, full precision DATA.xlsx"),sheetName = "data", append=TRUE)
   
   #.............................................................................
   ## 03.2. Create output tables with rounded values ----
@@ -460,5 +461,5 @@
   
   # Export all data to single workbook
   data_list <- list("section_dat" = bres_out_1, "division_dat" = bres_out_2,"group_dat" = bres_out_3, "class_dat" = bres_out_4)
-  write.xlsx(data_list, file = here("DATA_OUT","Detailed jobs, publication DATA.xlsx"), append=TRUE,keepNA = TRUE, na.string="...")
+  write.xlsx(data_list, file = paste0(DATA_OUT,"Detailed jobs, publication DATA.xlsx"), append=TRUE,keepNA = TRUE, na.string="...")
       

@@ -28,7 +28,9 @@
   # Run the subscripts necessary 
   source(paste0(SUBSCRIPTS,"GLAE_functions_load",".r"))
 
+  # Load WFJ data
+  source(paste0(SUBSCRIPTS,"GLAE_wfj_dataload",".r"))
   
   # Run MDJ scripts
-  source(paste0(SCRIPTS,"01_Reshape_input_data",".r"))
+  source(paste0(SCRIPTS,"01_Prepare_input_data",".r"))
   source(paste0(SCRIPTS,"02_MDJ_table_production",".r"))

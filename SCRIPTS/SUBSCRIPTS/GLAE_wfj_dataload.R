@@ -7,7 +7,8 @@
 #.............................................................................
 
 # Download, or load, dataset
-wfj_stats_raw <- wfj_download(force_download = redownload_all)
+wfj_stats_raw <- wfj_download(force_download = TRUE,
+                              from_date = "1996-01")
 
 
 #.............................................................................
