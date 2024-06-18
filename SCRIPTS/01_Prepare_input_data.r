@@ -10,9 +10,8 @@
   #*****************************************************************************
   
   # !!-  This can be turned into a loop if more datasets are converted  -!!
-  data_path_vec <- c("2018_rev"=paste0("SRS outputs\\","20220217 AL Pub 1006953\\","Stata_output BRES2018_rev.xlsx"),
-                     "2020_rev_v2"=paste0("SRS outputs\\","20221220 NJ Pub 1006953\\More detailed jobs (13-12-22)\\","Stata_output BRES2020_rev_v2.xlsx"),
-                     "2021_prov_v3"=paste0("SRS outputs\\","20221220 NJ Pub 1006953\\More detailed jobs (13-12-22)\\","Stata_output BRES2021_prov_v3.xlsx"))
+  data_path_vec <- c("2021_rev_v4"=paste0("SRS outputs\\","20240408 YC Pub 1006953\\For clearance\\","Stata_output BRES2021_rev_v4.xlsx"),
+                     "2022_pro"=paste0("SRS outputs\\","20240408 YC Pub 1006953\\For clearance\\","Stata_output BRES2022_pro.xlsx"))
   
   for (dta in names(data_path_vec)) {
     
@@ -98,11 +97,12 @@
   
   # Load the NSA split in G
   # NB: ADJUST THIS RANGE TO INCLUDE NEW YEARS 
-  wfj_stats_mdj <- readxl::read_excel(path = paste0(INPUT,"londonjobseriesretailwholesaleempstatus1996to2021.xls"),
+  wfj_stats_mdj <- readxl::read_excel(path = paste0(INPUT,"londonjobseriesretailwholesaleempstatus1996to2022.xlsx"),
                                         sheet = "Section G, Emp SE breakdown",
-                                        range="A4:AB10") %>%
+                                        range="A4:AC10") %>%
     clean_names() %>% 
-    rename(x2021=x20211) %>% 
+    rename(x2021=x20211,
+           x2022=x20222) %>% 
     mutate(industry_name_simple = case_when(x2=="45+46: Wholesale and motor trades" ~ "Wholesale and motor repair",
                                             x2=="47: Retail trade, except of motor vehicles and motorcycles" ~ "Retail"),
            industry_code="G") %>% 
@@ -123,10 +123,13 @@
     select(-matches("industry_name_simple\\.\\w"),-split_share) %>% 
     rbind(wfj_stats_raw_mdj_totals)
   
+  
   # The existing code uses a wide WFJ series, so comply with that
   wfj_stats_mdj_wide <- wfj_stats_mdj %>% 
     pivot_wider(names_from = year,values_from = obs_value_yr,names_prefix = "wfj_") %>% 
     arrange(industry_code)
   
-    
+  # Retail - 0.6736, Wholesale and motor repair - 0.3264
+  wfj_stats_mdj_wide$wfj_2023[7] <- 643769 * 0.6736
+  wfj_stats_mdj_wide$wfj_2023[8] <- 643769 * 0.3264
   

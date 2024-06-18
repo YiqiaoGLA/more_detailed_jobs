@@ -65,6 +65,17 @@
   # Check that all code names are uniquely identified
   stopifnot(identical(sic_descriptions[,"code_name"], unique(sic_descriptions[,"code_name"])))
   
+  # Combine sic mapping and descriptions to have all at once
+  sic_descriptions_mapped <- sic_mapping %>% 
+    left_join(sic_descriptions,by=c("class"="code_name")) %>% 
+    left_join(sic_descriptions,by=c("group"="code_name"),suffix=c("","_group")) %>% 
+    left_join(sic_descriptions,by=c("division"="code_name"),suffix=c("","_division")) %>% 
+    left_join(sic_descriptions,by=c("section"="code_name"),suffix=c("","_section")) %>% 
+    rename(description_class=description)  %>% 
+    select(-c(contains("level_num"))) %>% 
+    relocate("class", "group", "division", "section",contains("description"))
+  
+  
   #.............................................................................
   ## 01.2. Import WFJ series ----
   #.............................................................................
@@ -260,13 +271,13 @@
   stopifnot(identical(bres_2017_rev[,"code_name"], unique(bres_2017_rev[,"code_name"])))
   
   #.............................................................................
-  # IMPORT 2018-2021
+  # IMPORT 2018-2022
   #.............................................................................
   
   # Newer format with more columns already.
   # Needs to perform split in section G and aggregate certain classes
   
-  for (year_data in c("2018_rev","2019_rev_v3","2020_rev_v2","2021_prov_v3")) {
+  for (year_data in c("2018_rev","2019_rev_v3","2020_rev_v2","2021_rev_v4","2022_pro")) {
     
     year <- substr(year_data,1,4)
     
@@ -328,7 +339,7 @@
                                "level_num" = numeric(),
                                "level_name" = character())
   
-  for (year_data in c("bres_9815","bres_2016_rev","bres_2017_rev", "bres_2018_rev", "bres_2019_rev_v3", "bres_2020_rev_v2","bres_2021_prov_v3")) {
+  for (year_data in c("bres_9815","bres_2016_rev","bres_2017_rev", "bres_2018_rev", "bres_2019_rev_v3", "bres_2020_rev_v2","bres_2021_rev_v4","bres_2022_pro")) {
     bres_temp <- eval(as.name(year_data))
     year <- substr(year_data,6,4)
     
@@ -361,7 +372,7 @@
   # Note on R code: using !!sym(.) tells R to evaluate the function immediately, so that it realises the string refers to an actual column
   # This is similar to using local macros within loops in Stata.
   
-  for (year in 1998:2021) {
+  for (year in 1998:2022) {
     bres_wfj_sectors <- bres_wfj_sectors %>% 
       mutate(!!sym(paste0("factor_",year)) := !!sym(paste0("wfj_",year))/!!sym(paste0("employee_jobs_",year))) 
   }
@@ -389,7 +400,7 @@
     arrange(level_num,code_name)
   
   # The loop below creates the constrained version of job numbers by multiplying factors with jobs in each relevant year
-  for (year in 1998:2021) {
+  for (year in 1998:2022) {
     bres_combined_constrained <- bres_combined_constrained %>% 
       mutate(!!sym(paste0("employee_jobs_c_",year)) := !!sym(paste0("employee_jobs_",year)) * !!sym(paste0("factor_",year))) %>% 
       mutate(!!sym(paste0("employee_jobs_c_",year)) :=  # Replace constrained sum with WFJ in section T
@@ -463,3 +474,139 @@
   data_list <- list("section_dat" = bres_out_1, "division_dat" = bres_out_2,"group_dat" = bres_out_3, "class_dat" = bres_out_4)
   write.xlsx(data_list, file = paste0(DATA_OUT,"Detailed jobs, publication DATA.xlsx"), append=TRUE,keepNA = TRUE, na.string="...")
       
+  
+  
+  # for tree mapping for 2022, create an "other" category within each higher level to contain jobs left out from below
+  ## First create 'other' rows for each higher level to append
+  collapse_level <- function(data=NULL,
+                             lownum=NULL,
+                             datayear=2022) {
+    
+    if (lownum == 2) lowlevel <-  "division"
+    if (lownum == 3) lowlevel <-  "group"
+    if (lownum == 4) lowlevel <-  "class"
+    
+    if (lowlevel=="division") highlevels <- c("section")
+    if (lowlevel=="group") highlevels <- c("division","section")
+    if (lowlevel=="class") highlevels <- c("group","division","section")
+    
+    higher_num <- lownum-1 
+    
+    desc_high <- c(paste0("description_",highlevels))
+
+    desc_low <- paste0("description_",lowlevel)
+    
+    # Data names
+    
+    ldata <- paste0("bres_out_",lownum)
+    hdata <- paste0("bres_out_",higher_num)
+    highlevel <- highlevels[1]
+    
+    emp_jobs_low <- paste0("employee_jobs_c_",datayear,"_",lowlevel)
+    emp_jobs_high <- paste0("employee_jobs_c_",datayear,"_",highlevel)
+
+    # first create the bin collector row
+    other_row_data <- data %>% 
+      mutate(!!desc_low:=paste0("Other ",lowlevel)) %>% 
+      group_by(across(all_of(c(highlevels,desc_high)))) %>% 
+      filter(row_number()==1) %>% 
+      select(all_of(c(highlevels,desc_high,desc_low)))
+    
+    # Combine extra row with data and calculate remainder
+    collapse_data <- data %>% 
+      group_by(across(all_of(c(highlevels,desc_high,desc_low,lowlevel)))) %>% 
+      filter(row_number()==1) %>% 
+      select(all_of(c(highlevels,desc_high,lowlevel,desc_low))) %>% 
+      bind_rows(other_row_data) %>% 
+      left_join(get(ldata),
+                by=setNames("code_name",lowlevel)) %>% 
+      left_join(get(hdata),
+                by=setNames("code_name",highlevel),
+                suffix=c(paste0("_",lowlevel),paste0("_",highlevel))) %>% 
+      group_by(across(all_of(highlevel))) %>%
+        mutate(highlevel_sum = sum(!!sym(emp_jobs_low),na.rm = TRUE),
+               highlevel_diff=!!sym(emp_jobs_high)-highlevel_sum,
+               !!sym(emp_jobs_low) := case_when(!!sym(desc_low) == paste0("Other ",lowlevel) ~ highlevel_diff,
+                                                    TRUE ~ !!sym(emp_jobs_low))) %>% 
+      ungroup() %>% 
+      select(all_of(c(highlevels,desc_high,lowlevel,desc_low,emp_jobs_low))) %>% 
+      arrange(across(all_of(c(highlevels,lowlevel))))
+
+    return(collapse_data)
+  }
+  
+  section_emp_jobs <- bres_out_1 %>% 
+    rename(employee_jobs_c_2022_section=employee_jobs_c_2022,
+           description_section=description,
+           section=code_name) %>% 
+    select(section,description_section,employee_jobs_c_2022_section)
+  
+  division_emp_jobs <- collapse_level(sic_descriptions_mapped,2)
+  
+  group_emp_jobs <- collapse_level(sic_descriptions_mapped,3)
+  
+  class_emp_jobs <- collapse_level(sic_descriptions_mapped,4)
+  
+  # Final data for tree map
+  bres_out_2022_tree <- class_emp_jobs %>% 
+    full_join(group_emp_jobs,by=c("group","division","section",
+                                  "description_group","description_division","description_section")) %>% 
+    full_join(division_emp_jobs,by=c("division","section",
+                                     "description_division","description_section")) %>% 
+    full_join(section_emp_jobs,by=c("section",
+                              "description_section")) %>% 
+    mutate(employee_jobs_c_2022_class = case_when(description_division == "Other division" ~ employee_jobs_c_2022_division,
+                                                  description_group == "Other group" ~ employee_jobs_c_2022_group,
+                                                  TRUE ~ employee_jobs_c_2022_class),
+           employee_jobs_c_2022_group = case_when(description_division == "Other division" ~ employee_jobs_c_2022_division,
+                                                  TRUE ~ employee_jobs_c_2022_group)) %>% 
+    arrange(section,division,group,class) %>% 
+    relocate(section,division,group,class,
+             description_section,description_division,description_group,description_class,
+             employee_jobs_c_2022_section,employee_jobs_c_2022_division,employee_jobs_c_2022_group,employee_jobs_c_2022_class)
+  
+  write.xlsx(bres_out_2022_tree, file = paste0(DATA_OUT,"Blog/","Detailed jobs, tree diagram.xlsx"), append=TRUE)
+  
+  # Create dataset for Sankey diagram, i.e. with one class isolated from section. 
+  ## Choose Class 9312
+  sankey_data <- bres_out_2022_tree %>% 
+    filter(section=="R") %>% 
+    mutate(description_class = case_when(group == "931" & class != "9312" ~ "All other classes",
+                                         class == "9312" ~ paste0(": ",description_class),
+                                         TRUE ~ ""),
+           class = case_when(class == "9312" ~ class,
+                             TRUE ~ ""),
+           description_group = case_when(division == "93" & group != "931" ~ "All other groups",
+                                         group == "931" ~ paste0(": ",description_group),
+                                         TRUE ~ ""),
+           group = case_when(group == "931" ~ group,
+                             TRUE ~ ""),
+           description_division = case_when(division == "93" ~ paste0(": ",description_division),
+                                    TRUE ~ "All other divisions"),
+           division = case_when(division == "93" ~ division,
+                                TRUE ~ "")) %>% 
+    group_by(section,division,group,class,
+             description_section,description_division,description_group,description_class) %>% 
+    summarise(employee_jobs_c_2022_class = sum(employee_jobs_c_2022_class)) %>% 
+    ungroup() %>% 
+    mutate(section = paste0(section,": ",description_section),
+           division = paste0(division,description_division),
+           group = paste0(group,description_group),
+           class = paste0(class,description_class)) %>% 
+    select(section,division,group,class,employee_jobs_c_2022_class)   %>% 
+    pivot_longer(cols=c(section,division,group,class),names_to = "type",values_to = "type_name")%>% 
+    group_by(type,type_name) %>% 
+    summarise(employee_jobs_c_2022_class=sum(employee_jobs_c_2022_class)) %>% 
+    mutate(from_type_name = case_when(type=="class" ~ "931: Sports activities",
+                                      type=="group" ~ "93: Sports activities and amusement and recreation activities",
+                                      type=="division" ~ "R: Arts, entertainment and recreation  ",
+                                      TRUE ~ NA_character_),
+           type_name_2 = gsub(".*: ","",type_name),
+           from_type_name_2 = gsub(".*: ","",from_type_name)) %>% 
+    filter(from_type_name!="" & type_name!="") %>% 
+    relocate(type,from_type_name,type_name,from_type_name_2,type_name_2)
+    
+    
+  write.xlsx(sankey_data, file = paste0(DATA_OUT,"Blog/","Detailed jobs, Sankey.xlsx"), append=TRUE)
+    
+  

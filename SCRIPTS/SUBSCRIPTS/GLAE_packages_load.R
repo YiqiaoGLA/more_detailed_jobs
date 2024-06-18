@@ -29,9 +29,11 @@ library("svDialogs") #for pop-ups
 library("sf") # for geometry
 library("reactable") #For interactive tables
 library("openxlsx")
+library("treemap")
 
 
 # The below are needed to install GLA packages the first time it is runs
 #devtools::install_github("Greater-London-Authority/gglaplot")
 #devtools::install_github("Greater-London-Authority/ldndatar", auth_token = "96e66bb601f49f62f0bb9bdcb73a849ece358ad1")
 #remotes::install_github("wilkelab/ggtext")
+#install.packages("treemap")
